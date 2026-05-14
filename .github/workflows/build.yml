@@ -1,0 +1,64 @@
+name: Build Flutter APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: 'Build ID from AppFactory'
+        required: true
+        type: string
+      package_name:
+        description: 'Android Package Name'
+        required: true
+        type: string
+      app_name:
+        description: 'App Name'
+        required: true
+        type: string
+      callback_url:
+        description: 'Callback URL to update build status'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.0'
+        channel: 'stable'
+    
+    - name: Get dependencies
+      run: flutter pub get
+    
+    - name: Build APK
+      run: flutter build apk --release
+    
+    - name: Build AAB
+      run: flutter build appbundle --release
+    
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-release
+        path: build/app/outputs/flutter-apk/app-release.apk
+    
+    - name: Upload AAB Artifact  
+      uses: actions/upload-artifact@v4
+      with:
+        name: aab-release
+        path: build/app/outputs/bundle/release/app-release.aab
+
+    # Optional: Upload to AppFactory API if reachable
+    # - name: Upload to AppFactory
+    #   run: |
+    #     curl -X POST "${{ github.event.inputs.callback_url }}" \
+    #       -F "build_id=${{ github.event.inputs.build_id }}" \
+    #       -F "type=apk" \
+    #       -F "file=@build/app/outputs/flutter-apk/app-release.apk" || true
